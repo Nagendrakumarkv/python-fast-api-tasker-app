@@ -1,9 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 class TaskBase(BaseModel):
     title: str
     description: str | None = None
     is_completed: bool = False
+
+    # Validation
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, v):
+        if not v.strip():
+            raise ValueError("Title cannot be empty")
+        return v
+
 
 class TaskCreate(TaskBase):
     pass

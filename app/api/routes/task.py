@@ -6,6 +6,7 @@ from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskOut, TaskUpdate
 from app.api.deps import get_current_user
 from app.models.user import User
+from fastapi import BackgroundTasks
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -14,17 +15,42 @@ async def get_db():
     async with SessionLocal() as session:
         yield session
 
-@router.post("/", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
-async def create_task(payload: TaskCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def send_task_email(email: str, title: str):
+    print(f"Sending email to {email}: Task '{title}' created successfully!")
+
+@router.post("/", response_model=TaskOut)
+async def create_task(
+    payload: TaskCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     task = Task(**payload.dict(), user_id=current_user.id)
     db.add(task)
     await db.commit()
     await db.refresh(task)
+
+    # background email
+    background_tasks.add_task(send_task_email, current_user.email, task.title)
+
     return task
 
 @router.get("/", response_model=list[TaskOut])
-async def list_tasks(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    result = await db.execute(select(Task).where(Task.user_id == current_user.id))
+async def list_tasks(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 10,
+    is_completed: bool | None = None,
+):
+    query = select(Task).where(Task.user_id == current_user.id)
+
+    if is_completed is not None:
+        query = query.where(Task.is_completed == is_completed)
+
+    query = query.offset(skip).limit(limit)
+
+    result = await db.execute(query)
     tasks = result.scalars().all()
     return tasks
 
