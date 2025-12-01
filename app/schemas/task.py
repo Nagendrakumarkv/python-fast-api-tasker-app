@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 
 class TaskBase(BaseModel):
     title: str
@@ -24,6 +24,4 @@ class TaskUpdate(BaseModel):
 
 class TaskOut(TaskBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -3,8 +3,11 @@ uvicorn[standard]
 sqlalchemy>=2.0
 aiosqlite
 pydantic[email]
+pydantic-settings
 python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 pytest
+pytest-asyncio
 httpx
+python-multipart
