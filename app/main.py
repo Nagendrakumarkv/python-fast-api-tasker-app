@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.api.routes.health import router as health_router
 from app.api.routes.task import router as task_router
+from app.api.routes.auth import router as auth_router
 
 from app.models.task import Base
 from app.db.session import engine
@@ -16,3 +17,4 @@ async def startup():
 # Register routes
 app.include_router(health_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")

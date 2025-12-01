@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 
 Base = declarative_base()
 
@@ -10,3 +10,5 @@ class Task(Base):
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     is_completed = Column(Boolean, default=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"))
