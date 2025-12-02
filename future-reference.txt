@@ -1,0 +1,293 @@
+🚀 Updated 5-Day FastAPI Project Plan (No venv, Using requirements.txt)
+
+We will build:
+
+Task Manager API
+✔ Users
+✔ Login (JWT)
+✔ Tasks CRUD
+✔ Pagination + Filters
+✔ Background tasks
+✔ Docker (optional)
+
+📌 BEFORE STARTING — Create project folder
+D:\python\fast-api\fastapi-tasker
+
+
+Inside this folder create a file:
+
+requirements.txt
+
+📅 DAY 1 — Project Setup + Install Dependencies + First API
+1️⃣ Create requirements.txt
+
+Paste this:
+
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+aiosqlite
+pydantic[email]
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+pytest
+httpx
+
+2️⃣ Install all dependencies
+pip install -r requirements.txt
+
+3️⃣ Create folder structure
+app/
+  main.py
+  api/routes/
+  core/
+  db/
+  models/
+  schemas/
+
+
+Create empty __init__.py in each folder.
+
+4️⃣ Create first API – health check
+
+app/api/routes/health.py
+
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/health")
+def health():
+    return {"status": "ok"}
+
+5️⃣ Create main file
+
+app/main.py
+
+from fastapi import FastAPI
+from app.api.routes.health import router as health_router
+
+app = FastAPI(title="FastAPI Tasker")
+
+app.include_router(health_router, prefix="/api")
+
+6️⃣ Run server (no venv)
+python -m uvicorn app.main:app --reload
+
+
+Open browser:
+👉 http://localhost:8000/docs
+
+Day 1 complete 🎯
+
+📅 DAY 2 — Setup Database + Models + CRUD for Tasks
+1️⃣ DB configuration
+
+app/core/config.py
+
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    DATABASE_URL: str = "sqlite+aiosqlite:///./tasker.db"
+
+settings = Settings()
+
+2️⃣ Database session
+
+app/db/session.py
+
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from app.core.config import settings
+
+engine = create_async_engine(settings.DATABASE_URL, echo=True)
+SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+3️⃣ Task model
+
+app/models/task.py
+
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Integer, String, Boolean
+
+Base = declarative_base()
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String)
+    is_completed = Column(Boolean, default=False)
+
+4️⃣ Create tables on startup
+
+app/main.py
+
+from app.models.task import Base
+from app.db.session import engine
+
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+5️⃣ Task schemas
+
+app/schemas/task.py
+
+from pydantic import BaseModel
+
+class TaskBase(BaseModel):
+    title: str
+    description: str = None
+    is_completed: bool = False
+
+class TaskCreate(TaskBase):
+    pass
+
+class TaskOut(TaskBase):
+    id: int
+    class Config:
+        orm_mode = True
+
+6️⃣ CRUD routes
+
+app/api/routes/task.py
+(Including list, get, update, delete)
+
+Add task router
+
+main.py
+
+from app.api.routes.task import router as task_router
+app.include_router(task_router, prefix="/api")
+
+
+Day 2 complete 🎯
+
+📅 DAY 3 — Users + JWT Auth + Protect Tasks
+1️⃣ User model
+
+app/models/user.py
+
+from sqlalchemy import Column, Integer, String
+from app.models.task import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+
+
+Add user_id to Task:
+
+user_id = Column(Integer, ForeignKey("users.id"))
+
+2️⃣ Auth utils
+
+hashing passwords
+
+creating JWT tokens
+
+verifying JWT
+
+3️⃣ Auth routes
+/api/auth/register
+/api/auth/login
+4️⃣ Protect all task routes
+
+Add:
+
+current_user: User = Depends(get_current_user)
+
+
+All tasks now belong to logged-in user.
+
+Day 3 complete 🎯
+
+📅 DAY 4 — Filters, Pagination, Background Tasks, Testing
+1️⃣ Pagination in list tasks
+GET /tasks?skip=0&limit=10
+
+2️⃣ Filter by completed status
+GET /tasks?is_completed=true
+
+3️⃣ Background task example
+
+Send fake “email” on task creation.
+
+4️⃣ Tests
+
+tests/test_health.py
+
+import pytest
+from httpx import AsyncClient
+from app.main import app
+
+@pytest.mark.asyncio
+async def test_health():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        r = await ac.get("/api/health")
+    assert r.status_code == 200
+
+
+Run:
+
+pytest
+
+
+Day 4 complete 🎯
+
+📅 DAY 5 — Project Cleanup + Docs + Docker (Optional)
+1️⃣ Enable CORS
+
+For Angular/React frontend.
+
+2️⃣ Add API docs description
+
+Update FastAPI title, description, version.
+
+3️⃣ Create Dockerfile (optional)
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+Build:
+
+docker build -t fastapi-tasker .
+
+
+Run:
+
+docker run -p 8000:8000 fastapi-tasker
+
+4️⃣ Next steps I can guide you
+
+Connect Angular frontend
+
+Deploy to Render
+
+Add refresh token
+
+Add role-based access
+
+Add Postgres instead of SQLite
+
+🎉 Final Output
+
+A complete FastAPI app, production-ready structure, no venv, all dependencies in requirements.txt.
+
+If you want, bro, I can generate:
+
+✔ Full folder structure
+✔ All code files ready-to-use
+✔ GitHub-ready version
+✔ Step-by-step implementation for Day 1 right now
+
+Just tell me 👉 “Give full code” or “Start Day 1 implementation”
